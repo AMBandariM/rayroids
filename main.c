@@ -41,6 +41,7 @@ int main(void) {
 
     SetTraceLogLevel(LOG_FATAL);
     InitWindow(screen_width, screen_height, "Rayroids");
+    if (!IsWindowFullscreen()) ToggleFullscreen();
     SetExitKey(KEY_NULL);
     Shader space_shader = LoadShader(0, "shaders/space.fs");
     SetTargetFPS(120);
