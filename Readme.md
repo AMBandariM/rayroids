@@ -3,13 +3,13 @@ A small Asteroids-style space shooter game written in C using [raylib](https://g
 
 ## Screenshots
 <p align="center">
-  <img src="shots/shot-00.png" height="400">
-  <img src="shots/shot-01.png" height="400">
+  <img src="shots/shot-00.png" height="200">
+  <img src="shots/shot-01.png" height="200">
 </p>
 
 <p align="center">
-  <img src="shots/shot-02.png" height="400">
-  <img src="shots/shot-03.png" height="400">
+  <img src="shots/shot-02.png" height="200">
+  <img src="shots/shot-03.png" height="200">
 </p>
 
 ## Requirements
