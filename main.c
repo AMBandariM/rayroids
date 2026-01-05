@@ -25,7 +25,9 @@ typedef struct {
 
 int main(void) {
     // general state
-    int screen_width = 800, screen_height = 600;
+#define SCREEN_WIDTH 1000
+#define SCREEN_HEIGHT 800
+    int screen_width = SCREEN_WIDTH, screen_height = SCREEN_HEIGHT;
     GameScene game_scene = GS_MENU;
     // menu state
     MenuState menu_state = MS_START_NEW_GAME;
@@ -39,15 +41,18 @@ int main(void) {
     int score = 0, highest = 0, hp = 1;
     int read_n; char *read_data = LoadFileData("data.bin", &read_n); if (read_n) highest = *(int *)read_data; UnloadFileData(read_data);
 
-    SetTraceLogLevel(LOG_FATAL);
+    SetTraceLogLevel(LOG_NONE);
     InitWindow(screen_width, screen_height, "Rayroids");
     if (!IsWindowFullscreen()) ToggleFullscreen();
+    int monitor = GetCurrentMonitor();
     SetExitKey(KEY_NULL);
     Shader space_shader = LoadShader(0, "shaders/space.fs");
     SetTargetFPS(120);
     HideCursor();
     bool running = true;
     while (!WindowShouldClose() && running) {
+        monitor = GetCurrentMonitor();
+        if (IsWindowFullscreen()) {screen_width = GetMonitorWidth(monitor); screen_height = GetMonitorHeight(monitor);} else {screen_width = SCREEN_WIDTH; screen_height = SCREEN_HEIGHT;}
         screen_width = GetRenderWidth(); screen_height = GetRenderHeight();
         BeginDrawing();
         switch (game_scene) {

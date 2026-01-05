@@ -16,28 +16,10 @@ A small Asteroids-style space shooter game written in C using [raylib](https://g
 - C compiler
 - [raylib](https://github.com/raysan5/raylib)
 
-The Makefile expects raylib at:
-```
-./raylib/include
-./raylib/lib
-```
+The Makefile expects raylib at `./raylib/include` and `./raylib/lib`.
 
-## Quick Start (Linux)
+## Quick Start
 Build and Run:
 ```console
 $ make
-```
-Static Raylib Build:
-```console
-$ make bind
-```
-Run:
-```console
-$ ./rayroids
-```
-
-## Windows Export
-Figure it out. This is what ChatGPT says you should do:
-```console
-$ x86_64-w64-mingw32-gcc main.c -Iraylib/include raylib/lib/libraylib.a -lopengl32 -lgdi32 -lwinmm -o SpaceRayShooter.exe
 ```
