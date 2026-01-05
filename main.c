@@ -188,11 +188,14 @@ int main(void) {
             DrawText(score_text, (screen_width - MeasureText(score_text, 36)) / 2, screen_height / 2, 36, text_color);
             DrawText("press R/M to restart/menu", (screen_width - MeasureText("press R/M to restart/menu", 18)) / 2, screen_height - 22, 18, text_color);
             if (IsKeyReleased(KEY_R)) {
-                if (score > highest) highest = score;
+                if (new_high) highest = score;
                 ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f };
                 shoot_timer = meteor_timer = ship_angle = 0.0f; score = 0; n_meteors = 0; hp = 1;
                 game_scene = GS_GAME;
-            } else if (IsKeyReleased(KEY_M)) game_scene = GS_MENU;
+            } else if (IsKeyReleased(KEY_M)) {
+                if (new_high) highest = score;
+                game_scene = GS_MENU;
+            }
         } break;
         case GS_CREDITS: {
             if (IsKeyPressed(KEY_ESCAPE)) game_scene = GS_MENU;
