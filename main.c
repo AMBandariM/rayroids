@@ -1,6 +1,10 @@
 #include <raylib.h>
 #include <raymath.h>
 
+#ifndef __linux__
+#define ToggleFullscreen ToggleBorderlessWindowed
+#endif
+
 typedef enum { GS_MENU, GS_GAME, GS_OVER, GS_CREDITS } GameScene;
 
 typedef enum { MS_START_NEW_GAME, MS_TOGGLE_FULLSCREEN, MS_CREDITS, MS_EXIT, MS_N } MenuState;
