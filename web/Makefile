@@ -1,3 +1,7 @@
+reallythis:
+	clang --target=wasm32 --no-standard-libraries -Wl,--export-table -Wl,--no-entry -Wl,--allow-undefined -Wl,--export-all -o index.wasm index.c -DPLATFORM_WEB
+	python -m http.server 1234
+
 this: ext
 	python -m http.server 1234
 
