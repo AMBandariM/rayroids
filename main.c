@@ -19,6 +19,12 @@ const Vector2 ship_body[s_ship_body] = {
 };
 
 typedef struct {
+    Vector2 start;
+    Vector2 diff;
+    float   timer;
+} Bullet;
+
+typedef struct {
     unsigned char size;  // at most 8
     Vector2  center;
     Vector2  nodes[8];   // number of nodes is specified by size
@@ -29,8 +35,8 @@ typedef struct {
 
 int main(void) {
     // general state
-#define SCREEN_WIDTH 1000
-#define SCREEN_HEIGHT 800
+#define SCREEN_WIDTH 1600
+#define SCREEN_HEIGHT 900
     int screen_width = SCREEN_WIDTH, screen_height = SCREEN_HEIGHT;
     GameScene game_scene = GS_MENU;
     // menu state
@@ -38,14 +44,16 @@ int main(void) {
     // game state
     Vector2 ship_pos = {0}; const float speed = 200.0f;
     float ship_angle = 0.0f; const float angular_speed = 0.2f; const float angular_speed_inplace_add = 0.3f;
-    float shooter_timer = 0.0f; float shoot_timer = 0.0f; const float shoot_cooldown = 0.3f;
+    float shooter_timer = 0.0f; const float shoot_cooldown = 0.1f;
+    #define max_n_bullets 10
+    int n_bullets = 0; Bullet bullets[max_n_bullets] = {0}; const float bullet_time = 0.3f;
     #define max_n_meteors 64
     int n_meteors = 0; Meteor meteors[max_n_meteors] = {0};
     float meteor_timer = 0.0f; const float meteor_cooldown = 10.0f;
     int score = 0, highest = 0, hp = 1;
     int read_n; char *read_data = LoadFileData("data.bin", &read_n); if (read_n) highest = *(int *)read_data; UnloadFileData(read_data);
 
-    SetTraceLogLevel(LOG_NONE);
+    // SetTraceLogLevel(LOG_NONE);
     InitWindow(screen_width, screen_height, "Rayroids");
     if (!IsWindowFullscreen()) ToggleFullscreen();
     int monitor = GetCurrentMonitor();
@@ -71,7 +79,8 @@ int main(void) {
             if (IsKeyReleased(KEY_SPACE)) switch (menu_state) {
                 case MS_START_NEW_GAME: {
                     ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f };
-                    shoot_timer = meteor_timer = ship_angle = 0.0f; score = 0; n_meteors = 0; hp = 1;
+                    meteor_timer = ship_angle = 0.0f; score = 0; n_bullets = n_meteors = 0; hp = 1;
+
                     game_scene = GS_GAME;
                 } break;
                 case MS_TOGGLE_FULLSCREEN: ToggleFullscreen(); break;
@@ -89,12 +98,18 @@ int main(void) {
             float rotation_dir = 0.0f;
             if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) rotation_dir = 1.0f;
             if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) rotation_dir = -1.0f;
-            if (shooter_timer > EPSILON) rotation_dir = 0.0f;
-            ship_angle += rotation_dir * dt * (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) ? angular_speed : angular_speed + angular_speed_inplace_add) * 2 * PI;
+            // if (shooter_timer > EPSILON) rotation_dir = 0.0f;
+            ship_angle += rotation_dir * dt * (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) || shooter_timer > EPSILON ? angular_speed : angular_speed + angular_speed_inplace_add) * 2 * PI;
             // player move and shoot
             if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) ship_pos = Vector2Add(ship_pos, Vector2Rotate((Vector2){ .x = speed * dt, .y = 0.0f }, ship_angle));
-            if (IsKeyDown(KEY_SPACE) && shooter_timer < EPSILON) {
-                shooter_timer = shoot_timer = shoot_cooldown;
+            if (IsKeyDown(KEY_SPACE) && shooter_timer < EPSILON && n_bullets < max_n_bullets) {
+                shooter_timer = shoot_cooldown;
+                bullets[n_bullets] = (Bullet){
+                    .start = Vector2Add(ship_pos, Vector2Rotate(Vector2Add(ship_body[0], (Vector2){ .x = 40.0f, .y = 0.0f }), ship_angle)),
+                    .diff = Vector2Add(ship_body[0], Vector2Rotate((Vector2){ .x = 480.0f, .y = 0.0f }, ship_angle)),
+                    .timer = bullet_time
+                };
+                n_bullets++;
             }
             // player screen limit
             if (ship_pos.x < 0.0f) ship_pos.x += screen_width;
@@ -133,7 +148,13 @@ int main(void) {
                 }
             }
             // timers
-            shoot_timer -= dt; if (shoot_timer < EPSILON) shoot_timer = 0.0f;
+            for (int i = 0; i < n_bullets; ++i) {
+                bullets[i].timer -= dt;
+                if (bullets[i].timer < EPSILON) {
+                    bullets[i] = bullets[n_bullets - 1];
+                    n_bullets--;
+                }
+            }
             shooter_timer -= dt; if (shooter_timer < EPSILON) shooter_timer = 0.0f;
             meteor_timer -= dt; if (meteor_timer < EPSILON) meteor_timer = 0.0f;
             for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
@@ -148,10 +169,12 @@ int main(void) {
                         if (!hp) game_scene = GS_OVER;
                     }
                 }
-                if (shoot_timer > EPSILON) {
-                    float t = (shoot_cooldown - shoot_timer) / shoot_cooldown;
-                    Vector2 lead = Vector2Add(Vector2Add(ship_pos, d), Vector2Rotate((Vector2){ .x = 40.0f + 480.0f * t, .y = 0.0f }, ship_angle));
-                    DrawLineEx(Vector2Add(Vector2Add(ship_pos, d), Vector2Rotate((Vector2){ .x = 40.0f + 480.0f * t * t, .y = 0.0f }, ship_angle)), lead, 4.0f, RAYWHITE);
+                for (int bul = 0; bul < n_bullets; ++bul) {
+                    // TraceLog(LOG_FATAL, "DUDE");
+                    float t = (bullet_time - bullets[bul].timer) / bullet_time;
+                    Vector2 shift = (Vector2){ .x = 1.0f * dx * SCREEN_WIDTH, .y = 1.0f * dy * SCREEN_HEIGHT };
+                    Vector2 lead = Vector2Add(Vector2Add(bullets[bul].start, shift), Vector2Scale(bullets[bul].diff, t*t));
+                    DrawLineEx(Vector2Add(Vector2Add(bullets[bul].start, shift), Vector2Scale(bullets[bul].diff, t)), lead, 4.0f, RED);
                     // meteor physics
                     for (int i = 0; i < n_meteors; ++i) if (CheckCollisionPointPoly(Vector2Subtract(lead, meteors[i].center), meteors[i].nodes, meteors[i].size)) {
                         if ((dx != 0 || dy != 0) && meteors[i].is_new) continue;
@@ -167,14 +190,14 @@ int main(void) {
                             if (n_meteors < max_n_meteors - 1) n_meteors++;
                         }
                         else n_meteors--;
-                        score++; shoot_timer = 0.0f; break;
+                        score++; bullets[bul] = bullets[n_bullets - 1]; n_bullets--; break;
                     }
                 }
                 // meteor graphics
-                for (int i = 0; i < n_meteors; ++i) if (!meteors[i].is_new) for (int j = 0; j < meteors[i].size; ++j) DrawLineEx(Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[j])), Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[(j + 1) % meteors[i].size])), 2.0f, RAYWHITE);
+                for (int i = 0; i < n_meteors; ++i) if (!meteors[i].is_new) for (int j = 0; j < meteors[i].size; ++j) DrawLineEx(Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[j])), Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[(j + 1) % meteors[i].size])), 2.0f, BLUE);
             }
             // meteor graphics cont.
-            for (int i = 0; i < n_meteors; ++i) if (meteors[i].is_new) for (int j = 0; j < meteors[i].size; ++j) DrawLineEx(Vector2Add(meteors[i].center, meteors[i].nodes[j]), Vector2Add(meteors[i].center, meteors[i].nodes[(j + 1) % meteors[i].size]), 2.0f, RAYWHITE);
+            for (int i = 0; i < n_meteors; ++i) if (meteors[i].is_new) for (int j = 0; j < meteors[i].size; ++j) DrawLineEx(Vector2Add(meteors[i].center, meteors[i].nodes[j]), Vector2Add(meteors[i].center, meteors[i].nodes[(j + 1) % meteors[i].size]), 2.0f, YELLOW);
             // texts
             DrawText(TextFormat("SCORE :: %08d / %08d", score, highest), 20, 20, 20, GRAY);
             DrawText(TextFormat("FPS :: %d", GetFPS()), 20, screen_height - 40, 20, GRAY);
@@ -190,7 +213,7 @@ int main(void) {
             if (IsKeyReleased(KEY_R)) {
                 if (new_high) highest = score;
                 ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f };
-                shoot_timer = meteor_timer = ship_angle = 0.0f; score = 0; n_meteors = 0; hp = 1;
+                meteor_timer = ship_angle = 0.0f; score = 0; n_bullets = n_meteors = 0; hp = 1;
                 game_scene = GS_GAME;
             } else if (IsKeyReleased(KEY_M)) {
                 if (new_high) highest = score;
