@@ -105,8 +105,8 @@ int main(void) {
             if (IsKeyDown(KEY_SPACE) && shooter_timer < EPSILON && n_bullets < max_n_bullets) {
                 shooter_timer = shoot_cooldown;
                 bullets[n_bullets] = (Bullet){
-                    .start = Vector2Add(ship_pos, Vector2Rotate(Vector2Add(ship_body[0], (Vector2){ .x = 40.0f, .y = 0.0f }), ship_angle)),
-                    .diff = Vector2Add(ship_body[0], Vector2Rotate((Vector2){ .x = 480.0f, .y = 0.0f }, ship_angle)),
+                    .start = Vector2Add(ship_pos, Vector2Rotate(Vector2Add(ship_body[0], (Vector2){ .x = 20.0f, .y = 0.0f }), ship_angle)),
+                    .diff = Vector2Add(ship_body[0], Vector2Rotate((Vector2){ .x = 500.0f, .y = 0.0f }, ship_angle)),
                     .timer = bullet_time
                 };
                 n_bullets++;

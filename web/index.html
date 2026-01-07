@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+
+<script type="module">
+    function get_seven() {
+        return 7;
+    }
+    async function init() {
+        const { instance } = await WebAssembly.instantiateStreaming(
+            fetch("./add.wasm"), {env: {get_seven}}
+        );
+        console.log(`wasm add(4,1) = ${instance.exports.add(4, 1)}`);
+    }
+    init();
+</script>

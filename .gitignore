@@ -2,3 +2,4 @@ raylib/
 rayroids
 data.bin
 test*
+*.wasm
