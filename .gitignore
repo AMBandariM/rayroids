@@ -3,3 +3,4 @@ rayroids
 data.bin
 test*
 *.wasm
+web/native

@@ -196,6 +196,78 @@ function IsKeyReleased(key) {
     return prevDownKeys.has(key) && !currDownKeys.has(key);
 }
 
+// function TextFormat(formatPtr, ...args) {
+//     return formatPtr;
+// }
+
+
+
+
+
+
+
+
+let textFormatBufferPtr = null;
+let textFormatBufferPivot = null;
+const fixedBufferSize = 65536;
+function allocateTextFormatBuffer() {
+    if (textFormatBufferPtr !== null) return;
+    textFormatBufferPtr = buffer.byteLength;
+    textFormatBufferPivot = textFormatBufferPtr;
+    wasm.memory.grow(1);
+    buffer = wasm.memory.buffer;
+}
+function TextFormat(formatPtr, varargPtr) {
+    const format = CStrPtrToString(formatPtr);
+    const placeholderRegex = /%(0)?(\d*)d/g;
+
+    let argIndex = 0;
+    const formatted = format.replace(placeholderRegex, (match, zeroPad, widthStr) => {
+        const [arg] = new Int32Array(buffer, varargPtr + argIndex * 4, 1);
+        argIndex++;
+        let numStr = arg.toString();
+        const padChar = zeroPad ? '0' : ' ';
+        const width = parseInt(widthStr, 10) || 0;
+
+        if (width > numStr.length) {
+            if (padChar === '0' && numStr[0] === '-') {
+                const absStr = numStr.slice(1);
+                const padded = absStr.padStart(width - 1, '0');
+                numStr = '-' + padded;
+            } else {
+                numStr = numStr.padStart(width, padChar);
+            }
+        }
+        return numStr;
+    });
+
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(formatted);
+    let writeLen = Math.min(bytes.length, fixedBufferSize - 1);
+    if (textFormatBufferPivot + writeLen + 10 > textFormatBufferPtr + fixedBufferSize) textFormatBufferPivot = textFormatBufferPtr;
+    new Uint8Array(buffer, textFormatBufferPivot, writeLen).set(bytes.slice(0, writeLen));
+    new Uint8Array(buffer, textFormatBufferPivot + writeLen, 1)[0] = 0;
+    const ret = textFormatBufferPivot;
+    textFormatBufferPivot += writeLen + 1;
+    return ret;
+    
+}
+
+function DrawText(textPtr, posX, posY, fontSize, colorPtr) {
+    const text = CStrPtrToString(textPtr);
+    const color = ColorPtrToColor(colorPtr);
+    ctx.fillStyle = color;
+    fontSize *= 0.70;
+    ctx.font = `${fontSize}px grixel`;
+    ctx.fillText(text, posX, posY + fontSize / 2);
+}
+
+function MeasureText(textPtr, fontSize) {
+    fontSize *= 0.70;
+    ctx.font = `${fontSize}px grixel`;
+    return ctx.measureText(CStrPtrToString(textPtr)).width;
+}
+
 function GetRandomValue(min, max) {
     return min + Math.floor(Math.random()*(max - min + 1));
 }
@@ -203,12 +275,14 @@ function GetRandomValue(min, max) {
 async function init() {
     const { instance } = await WebAssembly.instantiateStreaming(
         fetch("./index.wasm"), {env: {
-            raylib_js_set_frame, InitWindow, ClearBackground, DrawLineEx, EndDrawing, IsKeyPressed, IsKeyDown, IsKeyReleased, GetRandomValue,
+            raylib_js_set_frame, InitWindow, ClearBackground, DrawLineEx, EndDrawing, IsKeyPressed, IsKeyDown, IsKeyReleased,
+            TextFormat, MeasureText, DrawText, GetRandomValue,
             cosf: Math.cos, sinf: Math.sin
         }}
     );
     wasm = instance.exports;
     buffer = wasm.memory.buffer;
+    allocateTextFormatBuffer()
     wasm.main();
     const next = (timestamp) => {
         frameFunc();

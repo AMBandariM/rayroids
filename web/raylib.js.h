@@ -164,17 +164,8 @@ void SetExitKey(int key) {
 void SetTargetFPS(int fps) {
     return;
 }
-void DrawText(const char *text, int posX, int posY, int fontSize, Color color) {
-    return;
-}
 int GetFPS(void) {
     return 6969;
-}
-const char *TextFormat(const char *text, ...) {
-    return "BOO";
-}
-int MeasureText(const char *text, int fontSize) {
-    return 10;
 }
 
 bool CheckCollisionPointPoly(Vector2 point, const Vector2 *points, int pointCount)
@@ -205,6 +196,9 @@ bool IsKeyPressed(int key);
 bool IsKeyDown(int key);
 bool IsKeyReleased(int key);
 int GetRandomValue(int min, int max);
+const char *TextFormat(const char *text, ...);
+void DrawText(const char *text, int posX, int posY, int fontSize, Color color);
+int MeasureText(const char *text, int fontSize);
 float GetFrameTime(void) {
     return 0.007f;
 }
