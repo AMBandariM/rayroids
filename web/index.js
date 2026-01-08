@@ -1,15 +1,16 @@
 // globals begin
 wasm = null; buffer = null; frameFunc = undefined;
+prevDownKeys = new Set(); currDownKeys = new Set();
 // globals end
 
 ctx = document.getElementById("screen").getContext("2d");
-ctx.canvas.width = 800;
-ctx.canvas.height = 450;
 
+// special function for raylib.js
 function raylib_js_set_frame(frame) {
     frameFunc = wasm.__indirect_function_table.get(frame);
 }
 
+// utils begin
 function ColorPtrToColor(colorPtr) {
     if (wasm === null) throw new Error("wasm not loaded");
     var [r, g, b, a] = new Uint8Array(buffer, colorPtr, 4);
@@ -20,12 +21,156 @@ function ColorPtrToColor(colorPtr) {
     return "#"+r+g+b+a;
 }
 
-function FillBackground(colorPtr) {
-    ctx.fillStyle = ColorPtrToColor(colorPtr);
-    ctx.fillRect(0, 0, 800, 450);
+function CStrLen(buffer, cstrPtr) {
+    let len = 0;
+    while (buffer[cstrPtr++] != 0) len++;
+    return len;
 }
 
-function DrawSegment(startPtr, endPtr, colorPtr, thick) {
+function CStrPtrToString(cstrPtr) {
+    const mem = new Uint8Array(buffer);
+    const len = CStrLen(mem, cstrPtr);
+    return new TextDecoder().decode(new Uint8Array(buffer, cstrPtr, len));
+}
+
+const glfwKeyMapping = {
+    "Space":          32,
+    "Quote":          39,
+    "Comma":          44,
+    "Minus":          45,
+    "Period":         46,
+    "Slash":          47,
+    "Digit0":         48,
+    "Digit1":         49,
+    "Digit2":         50,
+    "Digit3":         51,
+    "Digit4":         52,
+    "Digit5":         53,
+    "Digit6":         54,
+    "Digit7":         55,
+    "Digit8":         56,
+    "Digit9":         57,
+    "Semicolon":      59,
+    "Equal":          61,
+    "KeyA":           65,
+    "KeyB":           66,
+    "KeyC":           67,
+    "KeyD":           68,
+    "KeyE":           69,
+    "KeyF":           70,
+    "KeyG":           71,
+    "KeyH":           72,
+    "KeyI":           73,
+    "KeyJ":           74,
+    "KeyK":           75,
+    "KeyL":           76,
+    "KeyM":           77,
+    "KeyN":           78,
+    "KeyO":           79,
+    "KeyP":           80,
+    "KeyQ":           81,
+    "KeyR":           82,
+    "KeyS":           83,
+    "KeyT":           84,
+    "KeyU":           85,
+    "KeyV":           86,
+    "KeyW":           87,
+    "KeyX":           88,
+    "KeyY":           89,
+    "KeyZ":           90,
+    "BracketLeft":    91,
+    "Backslash":      92,
+    "BracketRight":   93,
+    "Backquote":      96,
+    //  GLFW_KEY_WORLD_1   161 /* non-US #1 */
+    //  GLFW_KEY_WORLD_2   162 /* non-US #2 */
+    "Escape":         256,
+    "Enter":          257,
+    "Tab":            258,
+    "Backspace":      259,
+    "Insert":         260,
+    "Delete":         261,
+    "ArrowRight":     262,
+    "ArrowLeft":      263,
+    "ArrowDown":      264,
+    "ArrowUp":        265,
+    "PageUp":         266,
+    "PageDown":       267,
+    "Home":           268,
+    "End":            269,
+    "CapsLock":       280,
+    "ScrollLock":     281,
+    "NumLock":        282,
+    "PrintScreen":    283,
+    "Pause":          284,
+    "F1":             290,
+    "F2":             291,
+    "F3":             292,
+    "F4":             293,
+    "F5":             294,
+    "F6":             295,
+    "F7":             296,
+    "F8":             297,
+    "F9":             298,
+    "F10":            299,
+    "F11":            300,
+    "F12":            301,
+    "F13":            302,
+    "F14":            303,
+    "F15":            304,
+    "F16":            305,
+    "F17":            306,
+    "F18":            307,
+    "F19":            308,
+    "F20":            309,
+    "F21":            310,
+    "F22":            311,
+    "F23":            312,
+    "F24":            313,
+    "F25":            314,
+    "NumPad0":        320,
+    "NumPad1":        321,
+    "NumPad2":        322,
+    "NumPad3":        323,
+    "NumPad4":        324,
+    "NumPad5":        325,
+    "NumPad6":        326,
+    "NumPad7":        327,
+    "NumPad8":        328,
+    "NumPad9":        329,
+    "NumpadDecimal":  330,
+    "NumpadDivide":   331,
+    "NumpadMultiply": 332,
+    "NumpadSubtract": 333,
+    "NumpadAdd":      334,
+    "NumpadEnter":    335,
+    "NumpadEqual":    336,
+    "ShiftLeft":      340,
+    "ControlLeft" :   341,
+    "AltLeft":        342,
+    "MetaLeft":       343,
+    "ShiftRight":     344,
+    "ControlRight":   345,
+    "AltRight":       346,
+    "MetaRight":      347,
+    "ContextMenu":    348,
+    //  GLFW_KEY_LAST   GLFW_KEY_MENU
+}
+//utils end
+
+function InitWindow(width, height, titlePtr) {
+    ctx.canvas.width = width;
+    ctx.canvas.height = height;
+    const tit = CStrPtrToString(titlePtr);
+    document.title = tit;
+}
+
+function ClearBackground(colorPtr) {
+    ctx.fillStyle = ColorPtrToColor(colorPtr);
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+
+function DrawLineEx(startPtr, endPtr, thick, colorPtr) {
     [sx, sy] = new Float32Array(buffer, startPtr, 2);
     [ex, ey] = new Float32Array(buffer, endPtr, 2);
     ctx.beginPath();
@@ -34,13 +179,32 @@ function DrawSegment(startPtr, endPtr, colorPtr, thick) {
     ctx.moveTo(sx, sy);
     ctx.lineTo(ex, ey);
     ctx.stroke();
-    console.log("Shit");
+}
+
+function EndDrawing() {
+    prevDownKeys.clear()
+    prevDownKeys = new Set(currDownKeys);
+}
+
+function IsKeyPressed(key) {
+    return !prevDownKeys.has(key) && currDownKeys.has(key);
+}
+function IsKeyDown(key) {
+    return currDownKeys.has(key);
+}
+function IsKeyReleased(key) {
+    return prevDownKeys.has(key) && !currDownKeys.has(key);
+}
+
+function GetRandomValue(min, max) {
+    return min + Math.floor(Math.random()*(max - min + 1));
 }
 
 async function init() {
     const { instance } = await WebAssembly.instantiateStreaming(
         fetch("./index.wasm"), {env: {
-            raylib_js_set_frame, FillBackground, DrawSegment
+            raylib_js_set_frame, InitWindow, ClearBackground, DrawLineEx, EndDrawing, IsKeyPressed, IsKeyDown, IsKeyReleased, GetRandomValue,
+            cosf: Math.cos, sinf: Math.sin
         }}
     );
     wasm = instance.exports;
@@ -51,9 +215,9 @@ async function init() {
         window.requestAnimationFrame(next);
     };
     window.requestAnimationFrame((timestamp) => {
-        this.previous = timestamp;
         window.requestAnimationFrame(next);
     });
+    window.addEventListener("keydown", (e) => {currDownKeys.add(glfwKeyMapping[e.code]);});
+    window.addEventListener("keyup", (e) => {currDownKeys.delete(glfwKeyMapping[e.code]);});
 }
-console.log("???");
 init();

@@ -1,6 +1,10 @@
-reallythis:
-	clang --target=wasm32 --no-standard-libraries -Wl,--export-table -Wl,--no-entry -Wl,--allow-undefined -Wl,--export-all -o index.wasm index.c -DPLATFORM_WEB
+web:
+	clang --target=wasm32 -O3 --no-standard-libraries -Wl,--export-table -Wl,--no-entry -Wl,--allow-undefined -Wl,--export-all -o index.wasm index.c -DPLATFORM_WEB
 	python -m http.server 1234
+
+nat:
+	cc -ggdb -o native index.c ../raylib/lib/libraylib.a -lm -lpthread -ldl -lrt -lX11
+	./native
 
 this: ext
 	python -m http.server 1234
