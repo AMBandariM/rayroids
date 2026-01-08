@@ -1,6 +1,8 @@
 // globals begin
 wasm = null; buffer = null; frameFunc = undefined;
 prevDownKeys = new Set(); currDownKeys = new Set();
+dt = undefined; prevTimestamp = undefined;
+fpsTimeAcc = 0; fpsFrameCount = 0; fps = 60;
 // globals end
 
 ctx = document.getElementById("screen").getContext("2d");
@@ -184,6 +186,14 @@ function DrawLineEx(startPtr, endPtr, thick, colorPtr) {
 function EndDrawing() {
     prevDownKeys.clear()
     prevDownKeys = new Set(currDownKeys);
+
+    fpsFrameCount++;
+    fpsTimeAcc += dt;
+    if (fpsTimeAcc >= 1000.0) {
+        fpsTimeAcc = 0;
+        fps = fpsFrameCount;
+        fpsFrameCount = 0;
+    }
 }
 
 function IsKeyPressed(key) {
@@ -196,16 +206,14 @@ function IsKeyReleased(key) {
     return prevDownKeys.has(key) && !currDownKeys.has(key);
 }
 
-// function TextFormat(formatPtr, ...args) {
-//     return formatPtr;
-// }
+function GetFrameTime() {
+    if (dt === undefined) return 1.0; 
+    return dt / 1000.0;
+}
 
-
-
-
-
-
-
+function GetFPS() {
+    return fps;
+}
 
 let textFormatBufferPtr = null;
 let textFormatBufferPivot = null;
@@ -276,7 +284,7 @@ async function init() {
     const { instance } = await WebAssembly.instantiateStreaming(
         fetch("./index.wasm"), {env: {
             raylib_js_set_frame, InitWindow, ClearBackground, DrawLineEx, EndDrawing, IsKeyPressed, IsKeyDown, IsKeyReleased,
-            TextFormat, MeasureText, DrawText, GetRandomValue,
+            GetFrameTime, GetFPS, TextFormat, MeasureText, DrawText, GetRandomValue,
             cosf: Math.cos, sinf: Math.sin
         }}
     );
@@ -285,10 +293,13 @@ async function init() {
     allocateTextFormatBuffer()
     wasm.main();
     const next = (timestamp) => {
+        dt = timestamp - prevTimestamp;
+        prevTimestamp = timestamp;
         frameFunc();
         window.requestAnimationFrame(next);
     };
     window.requestAnimationFrame((timestamp) => {
+        prevTimestamp = timestamp;
         window.requestAnimationFrame(next);
     });
     window.addEventListener("keydown", (e) => {currDownKeys.add(glfwKeyMapping[e.code]);});
