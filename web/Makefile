@@ -1,5 +1,5 @@
 web:
-	clang --target=wasm32 -O3 --no-standard-libraries -Wl,--export-table -Wl,--no-entry -Wl,--allow-undefined -Wl,--export-all -o index.wasm index.c -DPLATFORM_WEB
+	clang --target=wasm32 -O3 --no-standard-libraries -Wl,--export-table -Wl,--no-entry -Wl,--allow-undefined -Wl,--export=main -o index.wasm index.c -DPLATFORM_WEB
 	python -m http.server 1234
 
 nat:

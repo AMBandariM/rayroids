@@ -25,6 +25,6 @@ ifeq ($(PLATFORM_OS),WINDOWS)
 	x86_64-w64-mingw32-gcc main.c -Iraylib/include raylib/lib/libraylib.a -lopengl32 -lgdi32 -lwinmm -o Rayroids.exe
 endif
 ifeq ($(PLATFORM_OS),LINUX)
-	cc -I./raylib/include -o rayroids main.c ./raylib/lib/libraylib.a -lm -lpthread -ldl -lrt -lX11
+	cc -DDEBUG -I./raylib/include -o rayroids main.c ./raylib/lib/libraylib.a -lm -lpthread -ldl -lrt -lX11
 endif
 
