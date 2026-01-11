@@ -169,6 +169,7 @@ function InitWindow(width, height, titlePtr) {
 
 function ClearBackground(colorPtr) {
     ctx.fillStyle = ColorPtrToColor(colorPtr);
+    console.log("clearing", ctx.fillStyle);
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
@@ -213,6 +214,14 @@ function GetFrameTime() {
 
 function GetFPS() {
     return fps;
+}
+
+function GetRenderWidth() {
+    return ctx.canvas.width;
+}
+
+function GetRenderHeight() {
+    return ctx.canvas.height;
 }
 
 let textFormatBufferPtr = null;
@@ -280,11 +289,15 @@ function GetRandomValue(min, max) {
     return min + Math.floor(Math.random()*(max - min + 1));
 }
 
+function TraceLog(mod, formatPtr, varargPtr) {
+    console.log(`${mode}: ${CStrPtrToString(formatPtr)}`)
+}
+
 async function init() {
     const { instance } = await WebAssembly.instantiateStreaming(
         fetch("./index.wasm"), {env: {
             raylib_js_set_frame, InitWindow, ClearBackground, DrawLineEx, EndDrawing, IsKeyPressed, IsKeyDown, IsKeyReleased,
-            GetFrameTime, GetFPS, TextFormat, MeasureText, DrawText, GetRandomValue,
+            GetFrameTime, GetFPS, GetRenderWidth, GetRenderHeight, TextFormat, MeasureText, DrawText, GetRandomValue, TraceLog,
             cosf: Math.cos, sinf: Math.sin
         }}
     );

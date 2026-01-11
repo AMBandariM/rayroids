@@ -123,6 +123,16 @@ typedef enum {
     KEY_VOLUME_UP       = 24,       // Key: Android volume up button
     KEY_VOLUME_DOWN     = 25        // Key: Android volume down button
 } KeyboardKey;
+typedef enum {
+    LOG_ALL = 0,        // Display all logs
+    LOG_TRACE,          // Trace logging, intended for internal use only
+    LOG_DEBUG,          // Debug logging, used for internal debugging, it should be disabled on release builds
+    LOG_INFO,           // Info logging, used for program execution info
+    LOG_WARNING,        // Warning logging, used on recoverable failures
+    LOG_ERROR,          // Error logging, used on unrecoverable failures
+    LOG_FATAL,          // Fatal logging, used to abort program: exit(EXIT_FAILURE)
+    LOG_NONE            // Disable logging
+} TraceLogLevel;
 
 #define LIGHTGRAY  (Color){ 200, 200, 200, 255 }   // Light Gray
 #define GRAY       (Color){ 130, 130, 130, 255 }   // Gray
@@ -151,19 +161,6 @@ typedef enum {
 #define MAGENTA    (Color){ 255, 0, 255, 255 }     // Magenta
 #define RAYWHITE   (Color){ 245, 245, 245, 255 }   // My own White (raylib logo)
 
-
-void CloseWindow(void) {
-    return;
-}
-void BeginDrawing(void) {
-    return;
-}
-void SetExitKey(int key) {
-    return;
-}
-void SetTargetFPS(int fps) {
-    return;
-}
 
 bool CheckCollisionPointPoly(Vector2 point, const Vector2 *points, int pointCount)
 {
@@ -195,11 +192,85 @@ bool IsKeyReleased(int key);
 int GetRandomValue(int min, int max);
 float GetFrameTime(void);
 int GetFPS(void);
+int GetRenderWidth(void);
+int GetRenderHeight(void);
 const char *TextFormat(const char *text, ...);
 void DrawText(const char *text, int posX, int posY, int fontSize, Color color);
 int MeasureText(const char *text, int fontSize);
+void TraceLog(int logLevel, const char *text, ...);
 
+//// MOCK
+typedef void* Shader;
+unsigned char *LoadFileData(const char *fileName, int *dataSize) {
+    *dataSize = 0;
+    return 0;
+}
+bool SaveFileData(const char *fileName, void *data, int dataSize) {
+    return false;
+}
+void UnloadFileData(unsigned char *data) {
+    return;
+}
+void CloseWindow(void) {
+    return;
+}
+void BeginDrawing(void) {
+    return;
+}
+void SetExitKey(int key) {
+    return;
+}
+int GetCurrentMonitor(void) {
+    return 0;
+}
+int GetMonitorRefreshRate(int monitor) {
+    return 0;
+}
+void SetTargetFPS(int fps) {
+    return;
+}
+#define SHADER_UNIFORM_FLOAT 1
+Shader LoadShader(const char *vsFileName, const char *fsFileName) {
+    return 0;
+}
+void UnloadShader(Shader shader) {
+    return;
+}
+void SetShaderValue(Shader shader, int locIndex, const void *value, int uniformType) {
+    return;
+}
+int GetShaderLocation(Shader shader, const char *uniformName) {
+    return 0;
+}
+void BeginShaderMode(Shader shader) {
+    return;
+}
+void EndShaderMode(void) {
+    return;
+}
+double GetTime(void) {
+    return 0.0;
+}
+void DrawRectangle(int posX, int posY, int width, int height, Color color) {
+    ClearBackground(color);
+}
+bool IsWindowFullscreen(void) {
+    return false;
+}
+void ToggleFullscreen(void) {
+    return;
+}
+void ToggleBorderlessWindowed(void) {
+    ToggleFullscreen();
+}
+void HideCursor(void) {
+    return;
+}
+void SetTraceLogLevel(int level) {
+    return;
+}
 
+//// End of MOCK
 
 
 
@@ -228,6 +299,12 @@ int MeasureText(const char *text, int fontSize);
 /// RAYMATH
 #define EPSILON 0.0000001f
 #define PI 3.14159265359f
+
+float Clamp(float value, float min, float max) {
+    float result = (value < min)? min : value;
+    if (result > max) result = max;
+    return result;
+}
 
 Vector2 Vector2Add(Vector2 v1, Vector2 v2) {
     Vector2 result = { v1.x + v2.x, v1.y + v2.y };

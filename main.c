@@ -52,7 +52,7 @@ GameScene game_scene = GS_MENU;
 // menu state
 MenuState menu_state = MS_START_NEW_GAME;
 // game state
-Vector2 ship_pos; const float speed = 200.0f;
+Vector2 ship_pos; float ship_curr_speed; const float ship_max_speed = 200.0f; const float ship_acceleration = 500.0f;
 float ship_angle; const float angular_speed = 0.2f; const float angular_speed_inplace_add = 0.3f;
 float shooter_timer; const float shoot_cooldown = 0.1f;
 #define max_n_bullets 10
@@ -69,12 +69,12 @@ bool running = true;
 // ---------------------------------------------------------------------------------------------
 
 void init_global_variables() {
-    int read_n; char *read_data = LoadFileData("data.bin", &read_n); if (read_n) highest = *(int *)read_data; UnloadFileData(read_data);
+    int read_n; unsigned char *read_data = LoadFileData("data.bin", &read_n); if (read_n) highest = *(int *)read_data; UnloadFileData(read_data);
     space_shader = LoadShader(0, "shaders/space.fs");
 }
 
 void init_gameplay() {
-    ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f };
+    ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f }; ship_curr_speed = 0.0f;
     shooter_timer = meteor_timer = 0.0f; ship_angle = -PI / 2.0f; score = 0; n_bullets = n_new_meteors = n_meteors = 0; hp = 1;
 }
 
@@ -125,7 +125,9 @@ void game_frame() {
         if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) rotation_dir = -1.0f;
         ship_angle += rotation_dir * dt * (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) || shooter_timer > EPSILON ? angular_speed : angular_speed + angular_speed_inplace_add) * 2 * PI;
         // player move and shoot
-        if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) ship_pos = Vector2Add(ship_pos, Vector2Rotate((Vector2){ .x = speed * dt, .y = 0.0f }, ship_angle));
+        ship_curr_speed += (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W) ? 1.0f : -1.5f) * ship_acceleration * dt;
+        ship_curr_speed = Clamp(ship_curr_speed, 0, ship_max_speed);
+        ship_pos = Vector2Add(ship_pos, Vector2Rotate((Vector2){ .x = ship_curr_speed * dt, .y = 0.0f }, ship_angle));
         if (IsKeyDown(KEY_SPACE) && shooter_timer < EPSILON && n_bullets < max_n_bullets) {
             shooter_timer = shoot_cooldown;
             bullets[n_bullets] = (Bullet){
