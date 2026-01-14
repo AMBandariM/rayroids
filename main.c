@@ -269,6 +269,7 @@ int main(void) {
     SetTraceLogLevel(LOG_NONE);
 #endif
     InitWindow(screen_width, screen_height, "Rayroids");
+    InitAudioDevice();
     init_global_variables();
     if (!IsWindowFullscreen()) ToggleFullscreen();
     SetExitKey(KEY_NULL);
