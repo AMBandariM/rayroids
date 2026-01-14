@@ -63,6 +63,7 @@ float meteor_timer; const float meteor_cooldown = 10.0f;
 int score, highest = 0, hp;
 Shader space_shader;
 bool running = true;
+Sound shootSound;
 
 // ---------------------------------------------------------------------------------------------
 //     FUNCTIONS
@@ -71,6 +72,7 @@ bool running = true;
 void init_global_variables() {
     int read_n; unsigned char *read_data = LoadFileData("data.bin", &read_n); if (read_n) highest = *(int *)read_data; UnloadFileData(read_data);
     space_shader = LoadShader(0, "shaders/space.fs");
+    shootSound = LoadSound("shoot.wav");
 }
 
 void init_gameplay() {
@@ -136,6 +138,7 @@ void game_frame() {
                 .timer = bullet_time
             };
             n_bullets++;
+            PlaySound(shootSound);
         }
         // player screen limit
         if (ship_pos.x < 0.0f) ship_pos.x += screen_width;
