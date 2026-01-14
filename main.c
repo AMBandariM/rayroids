@@ -64,6 +64,7 @@ int score, highest = 0, hp;
 Shader space_shader;
 bool running = true;
 Sound shootSound;
+Sound meteorSound;
 
 // ---------------------------------------------------------------------------------------------
 //     FUNCTIONS
@@ -73,6 +74,9 @@ void init_global_variables() {
     int read_n; unsigned char *read_data = LoadFileData("data.bin", &read_n); if (read_n) highest = *(int *)read_data; UnloadFileData(read_data);
     space_shader = LoadShader(0, "shaders/space.fs");
     shootSound = LoadSound("shoot.wav");
+    meteorSound = LoadSound("meteor.wav");
+    SetSoundVolume(shootSound, 0.7);
+    SetSoundVolume(meteorSound, 0.5);
 }
 
 void init_gameplay() {
@@ -138,6 +142,7 @@ void game_frame() {
                 .timer = bullet_time
             };
             n_bullets++;
+            SetSoundPitch(shootSound, 1.0 + GetRandomValue(-1, +1) / 30.0);
             PlaySound(shootSound);
         }
         // player screen limit
@@ -208,6 +213,8 @@ void game_frame() {
                 for (int i = 0; i < n_meteors; ++i) if (CheckCollisionPointPoly(Vector2Subtract(lead, meteors[i].center), meteors[i].nodes, meteors[i].size)) {
                     Meteor tmp = meteors[i];
                     meteors[i] = meteors[n_meteors - 1];
+                    SetSoundPitch(meteorSound, 1.0 + GetRandomValue(-10, +10) / 50.0);
+                    PlaySound(meteorSound);
                     if (tmp.size > 5) {
                         for (int j = n_meteors - 1; j <= n_meteors && j < max_n_meteors; ++j) {
                             meteors[j] = tmp; meteors[j].size--;
