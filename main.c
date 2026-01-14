@@ -228,7 +228,6 @@ void game_frame() {
         DrawText(TextFormat("FPS :: %d %d %d", GetFPS(), n_meteors, n_new_meteors), 20, screen_height - 40, 20, GRAY);
     } break;
     case GS_OVER: {
-        if (IsKeyPressed(KEY_ESCAPE)) game_scene = GS_MENU;
         const bool new_high = score > highest; 
         Color text_color = new_high ? GREEN : RED;
         DrawText(new_high ? "NEW HIGH SCORE" : "GAME OVER", (screen_width - MeasureText(new_high ? "NEW HIGH SCORE" : "GAME OVER", 48)) / 2, screen_height / 2 - 50, 48, text_color);
@@ -239,7 +238,7 @@ void game_frame() {
             if (new_high) highest = score;
             init_gameplay();
             game_scene = GS_GAME;
-        } else if (IsKeyReleased(KEY_M)) {
+        } else if (IsKeyReleased(KEY_M) || IsKeyPressed(KEY_ESCAPE)) {
             if (new_high) highest = score;
             game_scene = GS_MENU;
         }
