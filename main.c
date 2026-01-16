@@ -293,6 +293,7 @@ int main(void) {
 
     SaveFileData("data.bin", &highest, sizeof highest);
     UnloadShader(space_shader);
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }
