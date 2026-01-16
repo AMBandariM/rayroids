@@ -10,6 +10,36 @@
 #endif
 
 // ---------------------------------------------------------------------------------------------
+//     TOOLS and UTILITIES
+// ---------------------------------------------------------------------------------------------
+
+void compute_box(const Vector2 *points, int point_count, Vector2 *min, Vector2 *max) {
+    *min = (Vector2){ .x = 999999999.0f, .y = 999999999.0f }; *max = (Vector2){ .x = -999999999.0f, .y = -999999999.0f };
+    for (int i = 0; i < point_count; ++i) {
+        if (points[i].x < min->x) min->x = points[i].x;
+        if (points[i].y < min->y) min->y = points[i].y;
+        if (points[i].x > max->x) max->x = points[i].x;
+        if (points[i].y > max->y) max->y = points[i].y;
+    }
+}
+
+bool CheckCollisionPolyPoly(const Vector2 *pointsA, int pointCountA, const Vector2 *pointsB, int pointCountB); // Check if polygons collide
+bool CheckCollisionPolyPoly(const Vector2 *pointsA, int pointCountA, const Vector2 *pointsB, int pointCountB) {
+    // guard
+    Vector2 minA, minB, maxA, maxB; compute_box(pointsA, pointCountA, &minA, &maxA); compute_box(pointsB, pointCountB, &minB, &maxB);
+#ifdef DEBUG
+    DrawRectangleLines(minB.x, minB.y, maxB.x - minB.x, maxB.y - minB.y, RED);
+#endif
+    if ((minA.x > maxB.x) || (minA.y > maxB.y) || (minB.x > maxA.x) || (minB.y > maxA.y)) return false;
+    // have a point inside each other
+    if (CheckCollisionPointPoly(pointsA[0], pointsB, pointCountB) || CheckCollisionPointPoly(pointsB[0], pointsA, pointCountA)) return true;
+    // segment intersection
+    for (int ia = 0, ja = pointCountA - 1; ia < pointCountA; ja = ia++) for (int ib = 0, jb = pointCountA - 1; ib < pointCountA; jb = ib++) if (CheckCollisionLines(pointsA[ia], pointsA[ja], pointsB[ib], pointsB[jb], 0)) return true;
+    return false;
+}
+
+
+// ---------------------------------------------------------------------------------------------
 //     DEFINITIONS
 // ---------------------------------------------------------------------------------------------
 
@@ -60,7 +90,8 @@ int n_bullets; Bullet bullets[max_n_bullets] = {0}; const float bullet_time = 0.
 #define max_n_meteors 64
 int n_meteors; Meteor meteors[max_n_meteors] = {0}; int n_new_meteors; Meteor new_meteors[max_n_meteors];
 float meteor_timer; const float meteor_cooldown = 10.0f;
-int score, highest = 0, hp;
+bool is_colliding; float collision_timer; const float max_collision_timer = 0.5f;
+int score, highest = 0;
 Shader space_shader;
 bool running = true;
 Sound shootSound;
@@ -80,8 +111,8 @@ void init_global_variables() {
 }
 
 void init_gameplay() {
-    ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f }; ship_curr_speed = 0.0f;
-    shooter_timer = meteor_timer = 0.0f; ship_angle = -PI / 2.0f; score = 0; n_bullets = n_new_meteors = n_meteors = 0; hp = 1;
+    ship_pos = (Vector2){ .x = (float)screen_width / 2.0f, .y = (float)screen_height / 2.0f }; ship_curr_speed = 0.0f; is_colliding = false;
+    shooter_timer = meteor_timer = collision_timer = 0.0f; ship_angle = -PI / 2.0f; score = 0; n_bullets = n_new_meteors = n_meteors = 0;
 }
 
 void tik_tok(float dt) {
@@ -94,6 +125,8 @@ void tik_tok(float dt) {
     }
     shooter_timer -= dt; if (shooter_timer <= 0.0f) shooter_timer = 0.0f;
     meteor_timer -= dt; if (meteor_timer <= 0.0f) meteor_timer = 0.0f;
+    if (is_colliding) collision_timer += dt; else collision_timer = 0.0f;
+    if (collision_timer > max_collision_timer) game_scene = GS_OVER;
 }
 
 void game_frame() {
@@ -191,19 +224,29 @@ void game_frame() {
             if (miy < 0.0f) meteors[i].center.y += screen_height;
             else if (miy >= screen_height) meteors[i].center.y -= screen_height;
         }
+        // collision
+        is_colliding = false;
+        Vector2 moved_ship_body[s_ship_body];
+        for (int i = 0; i < s_ship_body; ++i) moved_ship_body[i] = Vector2Add(ship_pos, Vector2Rotate(ship_body[i], ship_angle));
+        for (int i = 0; i < n_meteors; ++i) {
+            Vector2 moved_meteor[8];// TODO :: this should be fixed. hardcoded value + recomputation
+            for (int j = 0; j < meteors[i].size; ++j) moved_meteor[j] = Vector2Add(meteors[i].center, meteors[i].nodes[j]);
+            if (CheckCollisionPolyPoly(moved_ship_body, s_ship_body, moved_meteor, meteors[i].size)) is_colliding = true;
+        }
+        // timers
         tik_tok(dt);
+        // graphics
+        Color white_red_lerp_collision = ColorLerp(RAYWHITE, DARKPURPLE, collision_timer / max_collision_timer);
         for (int dx = -1; dx <= 1; ++dx) for (int dy = -1; dy <= 1; ++dy) {
             Vector2 d = { .x = screen_width * dx, .y = screen_height * dy };
             // player graphics
             for (int i = 0; i < s_ship_body; ++i) {
-                Vector2 point = Vector2Add(Vector2Add(ship_pos, d), Vector2Rotate(ship_body[i], ship_angle));
-                DrawLineEx(point, Vector2Add(Vector2Add(ship_pos, d), Vector2Rotate(ship_body[(i + 1) % s_ship_body], ship_angle)), 2.0f, RAYWHITE);
-                // collision
-                if (dx == 0 && dy == 0) {
-                    for (int j = 0; j < n_meteors; ++j) if (CheckCollisionPointPoly(Vector2Subtract(point, meteors[j].center), meteors[j].nodes, meteors[j].size)) hp--;
-                    if (!hp) game_scene = GS_OVER;
-                }
+                DrawLineEx(Vector2Add(d, moved_ship_body[i]), Vector2Add(d, moved_ship_body[(i + 1) % s_ship_body]), 2.0f, white_red_lerp_collision);
             }
+            #ifdef DEBUG
+            Vector2 min, max; compute_box(moved_ship_body, s_ship_body, &min, &max);
+            DrawRectangleLines(min.x, min.y, max.x - min.x, max.y - min.y, RED);
+            #endif
             for (int bul = 0; bul < n_bullets; ++bul) {
                 float t = (bullet_time - bullets[bul].timer) / bullet_time;
                 Vector2 shift = (Vector2){ .x = 1.0f * dx * SCREEN_WIDTH, .y = 1.0f * dy * SCREEN_HEIGHT };
@@ -229,7 +272,7 @@ void game_frame() {
                 }
             }
             // meteor graphics
-            for (int i = 0; i < n_meteors; ++i) for (int j = 0; j < meteors[i].size; ++j) DrawLineEx(Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[j])), Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[(j + 1) % meteors[i].size])), 2.0f, RAYWHITE);
+            for (int i = 0; i < n_meteors; ++i) for (int j = 0; j < meteors[i].size; ++j) DrawLineEx(Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[j])), Vector2Add(d, Vector2Add(meteors[i].center, meteors[i].nodes[(j + 1) % meteors[i].size])), 2.0f, white_red_lerp_collision);
         }
         // meteor graphics cont.
         for (int i = 0; i < n_new_meteors; ++i) for (int j = 0; j < new_meteors[i].size; ++j) DrawLineEx(Vector2Add(new_meteors[i].center, new_meteors[i].nodes[j]), Vector2Add(new_meteors[i].center, new_meteors[i].nodes[(j + 1) % new_meteors[i].size]), 2.0f, GRAY);
