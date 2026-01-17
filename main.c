@@ -158,6 +158,7 @@ void game_frame() {
         float t = (float)GetTime(); SetShaderValue(space_shader, GetShaderLocation(space_shader, "time"), &t, SHADER_UNIFORM_FLOAT);
         BeginShaderMode(space_shader); DrawRectangle(-10, -10, 4000, 4000, BLACK); EndShaderMode();
         float dt = GetFrameTime();
+        if (IsKeyDown(KEY_LEFT_SHIFT)) dt *= 2.0f;
         // player rotation
         float rotation_dir = 0.0f;
         if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) rotation_dir = 1.0f;
